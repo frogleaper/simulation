@@ -49,7 +49,7 @@ def export():
     pdf.cell(200, 10, txt="Bank Queueing Simulation Report", ln=1, align="C")
 
     pdf.set_font("Arial", "", 12)
-    pdf.cell(200, 10, txt="Name: ​🇨​​🇭​​🇮​​🇧​​🇺​​🇮​​🇰​​🇪​ ​🇴​​🇷​​🇦​​🇪​​🇰​​🇼​​🇺​​🇴​​🇹​​🇺 | Reg No: 2020374005", ln=1)
+    pdf.cell(200, 10, txt="Name: ​CHIBUIKE ORAEKWUOTU | Reg No: 2020374005", ln=1)
     pdf.cell(200, 10, txt="Case Study: Bank Queue - Single vs Multi Channel", ln=1)
     pdf.ln(5)
 
