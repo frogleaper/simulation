@@ -44,17 +44,5 @@ The goal is to visualize wait times and help optimize resource allocation.
 
 ---
 
-## 📷 Screenshots
 
-| Home Page | Simulated Result Table | Exported PDF |
-|----------|-------------------------|--------------|
-| ![Home](screenshots/home.png) | ![Table](screenshots/table.png) | ![PDF](screenshots/pdf.png) |
-
----
-
-## 🚀 How to Run the Project
-
-### ✅ 1. Clone the Repo
-
-```bash
 
