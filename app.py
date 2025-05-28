@@ -5,9 +5,14 @@ from fpdf import FPDF
 import io
 import os
 import tempfile
+import re
 
 app = Flask(__name__)
 last_data = {}
+
+# Helper to sanitize strings for FPDF (Latin-1 only)
+def sanitize_text(text):
+    return re.sub(r'[^\x00-\xff]', '', text)
 
 @app.route("/")
 def index():
@@ -49,8 +54,8 @@ def export():
     pdf.cell(200, 10, txt="Bank Queueing Simulation Report", ln=1, align="C")
 
     pdf.set_font("Arial", "", 12)
-    pdf.cell(200, 10, txt="Name: ​CHIBUIKE ORAEKWUOTU | Reg No: 2020374005", ln=1)
-    pdf.cell(200, 10, txt="Case Study: Bank Queue - Single vs Multi Channel", ln=1)
+    pdf.cell(200, 10, txt=sanitize_text("Name: CHIBUIKE ORAEKWUOTU | Reg No: 2020374005"), ln=1)
+    pdf.cell(200, 10, txt=sanitize_text("Case Study: Bank Queue - Single vs Multi Channel"), ln=1)
     pdf.ln(5)
 
     pdf.set_font("Arial", "B", 10)
@@ -73,7 +78,7 @@ def export():
         pdf.cell(60, 8, str(last_data["multi"][i]), 1)
         pdf.ln()
 
-    # Plot chart
+    # Generate plot
     fig, ax = plt.subplots()
     ax.plot(last_data["arrivals"], label="Arrivals")
     ax.plot(last_data["single"], label="Single Channel Wait")
@@ -84,7 +89,7 @@ def export():
     ax.legend()
     plt.tight_layout()
 
-    # Save to a temporary image file
+    # Save chart to image
     img_io = io.BytesIO()
     plt.savefig(img_io, format="png")
     plt.close()
@@ -94,14 +99,20 @@ def export():
     tmp_img.write(img_io.read())
     tmp_img.close()
 
+    # Add chart image to PDF
     pdf.add_page()
     pdf.image(tmp_img.name, x=10, y=20, w=180)
 
-    # Save PDF to a temp file
+    # Save final PDF
     output = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(output.name)
 
-    return send_file(output.name, as_attachment=True, download_name="bank_queue_report.pdf")
+    # Serve and clean up
+    response = send_file(output.name, as_attachment=True, download_name="bank_queue_report.pdf")
+    os.unlink(tmp_img.name)
+    os.unlink(output.name)
+
+    return response
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
