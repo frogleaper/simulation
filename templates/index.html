@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Queueing Simulation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #121111;
+    }
+
+    h4 {
+      margin-top: 25px;
+      color: #fef9f9;
+    }
+
+    #exportBtn {
+      margin-top: 15px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bank Queueing Simulation: Single & Multi-Channel</h1>
+    <p>Name: ​🇨​​🇭​​🇮​​🇧​​🇺​​🇮​​🇰​​🇪​ ​🇴​​🇷​​🇦​​🇪​​🇰​​🇼​​🇺​​🇴​​🇹​​🇺 | Reg No: 2020374005</p>
+  </header>
+
+  <main>
+    <textarea id="manualInput" rows="5" placeholder="Click Auto Generate or enter 60 comma-separated hourly values"></textarea>
+    <br />
+    <button onclick="autoGenerate()">Generate Data</button>
+    <button onclick="simulate()">Simulate</button>
+    <a id="exportBtn" href="/export" download="queue_report.pdf" style="display: none;">📄 Download PDF</a>
+
+    <div id="resultBox"></div>
+  </main>
+
+  <script>
+    function autoGenerate() {
+      fetch('/simulate-auto')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("manualInput").value = data.join(', ');
+          document.getElementById("resultBox").innerHTML = '';
+          document.getElementById("exportBtn").style.display = 'none';
+        })
+        .catch(() => {
+          alert("Failed to auto-generate data.");
+        });
+    }
+
+    function simulate() {
+      const input = document.getElementById("manualInput").value.trim().split(',').map(x => x.trim());
+      fetch('/simulate', {
+        method: "POST",
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ input_data: input })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById("resultBox").innerHTML = `<p style="color:red;">${data.error}</p>`;
+          document.getElementById("exportBtn").style.display = 'none';
+          return;
+        }
+
+        let html = '<h3>Results:</h3>';
+        for (let d = 0; d < 5; d++) {
+          html += `<h4>Day ${d + 1}</h4>`;
+          html += `<table><thead>
+                    <tr>
+                      <th>Hour</th>
+                      <th>Arrival</th>
+                      <th>Wait (Single Channel)</th>
+                      <th>Wait (Multi Channel)</th>
+                    </tr>
+                  </thead><tbody>`;
+          for (let i = d * 12; i < (d + 1) * 12; i++) {
+            html += `<tr>
+                      <td>${i + 1}</td>
+                      <td>${data.original[i]}</td>
+                      <td>${data.result[i]}</td>
+                      <td>${data.multi[i]}</td>
+                    </tr>`;
+          }
+          html += '</tbody></table>';
+        }
+
+        document.getElementById("resultBox").innerHTML = html;
+        document.getElementById("exportBtn").style.display = 'inline-block';
+      })
+      .catch(() => {
+        document.getElementById("resultBox").innerHTML = `<p style="color:red;">Server error during simulation.</p>`;
+        document.getElementById("exportBtn").style.display = 'none';
+      });
+    }
+  </script>
+</body>
+</html>
