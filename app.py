@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 import io
 import os
-import tempfile
 
 app = Flask(__name__)
 last_data = {}
@@ -26,6 +25,7 @@ def simulate():
         if len(arrivals) != 60:
             return jsonify(error="Please provide exactly 60 hourly values."), 400
 
+        # Simulate waiting times (example logic)
         single_channel_wait = [max(0, arrivals[i] - np.random.randint(3, 7)) for i in range(60)]
         multi_channel_wait = [max(0, arrivals[i] - np.random.randint(5, 10)) for i in range(60)]
 
@@ -35,7 +35,7 @@ def simulate():
 
         return jsonify(original=arrivals, result=single_channel_wait, multi=multi_channel_wait)
 
-    except Exception as e:
+    except Exception:
         return jsonify(error="Simulation failed. Check your input."), 500
 
 @app.route("/export")
@@ -46,58 +46,68 @@ def export():
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(200, 10, txt="Bank Queueing Simulation Report", ln=1, align="C")
+    pdf.cell(0, 10, "Bank Queueing Simulation Report", ln=True, align="C")
 
     pdf.set_font("Arial", "", 12)
-    pdf.cell(200, 10, txt="Name: ​🇨​​🇭​​🇮​​🇧​​🇺​​🇮​​🇰​​🇪​ ​🇴​​🇷​​🇦​​🇪​​🇰​​🇼​​🇺​​🇴​​🇹​​🇺 | Reg No: 2020374005", ln=1)
-    pdf.cell(200, 10, txt="Case Study: Bank Queue - Single vs Multi Channel", ln=1)
+    pdf.cell(0, 10, "Name: Olasunkanmi Olawale | Reg No: 2020374005", ln=True)
+    pdf.cell(0, 10, "Case Study: Bank Queue - Single vs Multi Channel", ln=True)
     pdf.ln(5)
 
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(20, 8, "Hour", 1)
-    pdf.cell(30, 8, "Arrivals", 1)
-    pdf.cell(60, 8, "Single Channel Wait", 1)
-    pdf.cell(60, 8, "Multi Channel Wait", 1)
-    pdf.ln()
 
-    pdf.set_font("Arial", "", 10)
+    # Add hourly data with day headers and table headers
     for i in range(60):
         if i % 12 == 0:
+            if i != 0:
+                pdf.add_page()
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 10, f"Day {(i // 12) + 1}", ln=True)
             pdf.set_font("Arial", "B", 10)
-            pdf.cell(200, 8, f"Day {(i//12)+1}", ln=1)
+            pdf.cell(20, 8, "Hour", 1)
+            pdf.cell(30, 8, "Arrivals", 1)
+            pdf.cell(60, 8, "Single Channel Wait", 1)
+            pdf.cell(60, 8, "Multi Channel Wait", 1)
+            pdf.ln()
             pdf.set_font("Arial", "", 10)
 
-        pdf.cell(20, 8, f"{i+1}", 1)
+        pdf.cell(20, 8, str(i + 1), 1)
         pdf.cell(30, 8, str(last_data["arrivals"][i]), 1)
         pdf.cell(60, 8, str(last_data["single"][i]), 1)
         pdf.cell(60, 8, str(last_data["multi"][i]), 1)
         pdf.ln()
 
-    # Plot chart
-    fig, ax = plt.subplots()
+    # Plot chart in memory
+    fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(last_data["arrivals"], label="Arrivals")
     ax.plot(last_data["single"], label="Single Channel Wait")
     ax.plot(last_data["multi"], label="Multi Channel Wait")
-    ax.set_title("Bank Queue Forecast (60 Hours)")
+    ax.set_title("Bank Queue Forecast (60 Hours / 5 Days)")
     ax.set_xlabel("Hour")
-    ax.set_ylabel("People")
+    ax.set_ylabel("Number of People")
     ax.legend()
-    img_io = io.BytesIO()
     plt.tight_layout()
-    plt.savefig(img_io, format="png")
-    plt.close()
-    img_io.seek(0)
 
-    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    tmp_img.write(img_io.read())
-    tmp_img.close()
+    img_buffer = io.BytesIO()
+    plt.savefig(img_buffer, format='PNG')
+    plt.close(fig)
+    img_buffer.seek(0)
 
+    # Add plot page to PDF
     pdf.add_page()
-    pdf.image(tmp_img.name, x=10, y=20, w=180)
+    pdf.image(img_buffer, x=10, y=20, w=pdf.w - 20)
 
-    output = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf.output(output.name)
-    return send_file(output.name, as_attachment=True, download_name="bank_queue_report.pdf")
+    # Output PDF to memory buffer
+    pdf_output = io.BytesIO()
+    pdf.output(pdf_output)
+    pdf_output.seek(0)
+
+    return send_file(
+        pdf_output,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='bank_queue_report.pdf'
+    )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
