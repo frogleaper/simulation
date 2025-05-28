@@ -2,6 +2,10 @@
 
 This is a Queueing Simulation web application built with Python (Flask) and JavaScript. It simulates **customer arrival and wait times** at a bank, using both **single-channel** (one teller) and **multi-channel** (multiple tellers) queueing models.
 
+
+<img width="930" alt="bss" src="https://github.com/user-attachments/assets/e39c184b-2ce6-433e-a2db-54c6d376bbd5" />
+
+
 ## 📚 Project Description
 
 This project uses a **5-day hourly data case study** to analyze and compare queue wait times in:
